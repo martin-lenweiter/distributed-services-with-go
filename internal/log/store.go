@@ -35,11 +35,6 @@ func newStore(f *os.File) (*store, error) {
 	}, nil
 }
 
-type Record struct {
-	Offset uint64
-	Value  []byte
-}
-
 func (s *store) Append(p []byte) (n uint64, pos uint64, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

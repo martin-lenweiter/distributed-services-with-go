@@ -3,6 +3,7 @@ package log
 import (
 	"github.com/tysonmote/gommap"
 	"io"
+	"log"
 	"os"
 )
 
@@ -59,6 +60,7 @@ func (i *index) Close() error {
 // read : given an offset, returns a position
 func (i *index) Read(in int64) (out uint32, pos uint64, err error) {
 	if i.size == 0 {
+		log.Println("index empty")
 		return 0, 0, io.EOF
 	}
 	if in == -1 {
@@ -68,6 +70,7 @@ func (i *index) Read(in int64) (out uint32, pos uint64, err error) {
 	}
 	pos = uint64(out) * entWidth
 	if i.size < pos+entWidth {
+
 		return 0, 0, io.EOF
 	}
 	out = enc.Uint32(i.mmap[pos : pos+offWidth])
@@ -77,6 +80,7 @@ func (i *index) Read(in int64) (out uint32, pos uint64, err error) {
 
 func (i *index) Write(off uint32, pos uint64) error {
 	if uint64(len(i.mmap)) < i.size+entWidth {
+		log.Println("index full")
 		return io.EOF
 	}
 	enc.PutUint32(i.mmap[i.size:i.size+offWidth], off)
