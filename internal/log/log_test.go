@@ -1,7 +1,8 @@
 package log
 
 import (
-	log_v1 "github.com/martin-lenweiter/proglog/api/v1"
+	"errors"
+	api "github.com/martin-lenweiter/proglog/api/v1"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	"io"
@@ -34,7 +35,7 @@ func TestLog(t *testing.T) {
 }
 
 func testAppendRead(t *testing.T, log *Log) {
-	appended := &log_v1.Record{Value: []byte("hello world")}
+	appended := &api.Record{Value: []byte("hello world")}
 	off, err := log.Append(appended)
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), off)
@@ -46,13 +47,15 @@ func testAppendRead(t *testing.T, log *Log) {
 func testOutOfRangeErr(t *testing.T, log *Log) {
 	read, err := log.Read(1)
 	require.Nil(t, read)
-	require.Error(t, err)
+	var apiErr api.ErrOffsetOutOfRange
+	errors.As(err, &apiErr)
+	require.Equal(t, uint64(1), apiErr.Offset)
 }
 
 func testInitExisting(t *testing.T, log *Log) {
-	var appended []*log_v1.Record
+	var appended []*api.Record
 	for i := 0; i < 3; i++ {
-		appended = append(appended, &log_v1.Record{Value: []byte(
+		appended = append(appended, &api.Record{Value: []byte(
 			"hello world" + strconv.Itoa(i))})
 	}
 	for i := 0; i < 3; i++ {
@@ -77,7 +80,7 @@ func testInitExisting(t *testing.T, log *Log) {
 
 }
 func testReader(t *testing.T, log *Log) {
-	appended := &log_v1.Record{
+	appended := &api.Record{
 		Value: []byte("hello world"),
 	}
 	off, err := log.Append(appended)
@@ -86,13 +89,13 @@ func testReader(t *testing.T, log *Log) {
 	reader := log.Reader()
 	b, err := io.ReadAll(reader)
 	require.NoError(t, err)
-	read := &log_v1.Record{}
+	read := &api.Record{}
 	err = proto.Unmarshal(b[lenWidth:], read)
 	require.NoError(t, err)
 	require.Equal(t, appended.Value, read.Value)
 }
 func testTruncate(t *testing.T, log *Log) {
-	append := &log_v1.Record{
+	append := &api.Record{
 		Value: []byte("hello world"),
 	}
 	for i := 0; i < 3; i++ {

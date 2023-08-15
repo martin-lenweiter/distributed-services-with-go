@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	log_v1 "github.com/martin-lenweiter/proglog/api/v1"
+	api "github.com/martin-lenweiter/proglog/api/v1"
 	"google.golang.org/protobuf/proto"
 	"os"
 	"path"
@@ -78,7 +78,7 @@ func newSegment(dir string, baseOffset uint64, c Config) (*segment, error) {
 // we subtract the segment’s next offset from its base offset (which are both
 // absolute offsets) to get the entry’s relative offset in the segment. We then
 // increment the next offset to prep for a future append call.
-func (s *segment) Append(record *log_v1.Record) (offset uint64, err error) {
+func (s *segment) Append(record *api.Record) (offset uint64, err error) {
 	cur := s.nextOffset
 	record.Offset = cur
 	p, err := proto.Marshal(record)
@@ -105,7 +105,7 @@ func (s *segment) Append(record *log_v1.Record) (offset uint64, err error) {
 // offset and get the associated index entry. Once it has the index entry, the
 // segment can go straight to the record’s position in the store and read the
 // proper amount of data.
-func (s *segment) Read(off uint64) (*log_v1.Record, error) {
+func (s *segment) Read(off uint64) (*api.Record, error) {
 	rel := off - s.baseOffset
 
 	_, pos, err := s.index.Read(int64(rel))
@@ -116,7 +116,7 @@ func (s *segment) Read(off uint64) (*log_v1.Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	rec := &log_v1.Record{}
+	rec := &api.Record{}
 
 	err = proto.Unmarshal(bytes, rec)
 	if err != nil {

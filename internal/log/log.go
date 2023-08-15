@@ -1,8 +1,7 @@
 package log
 
 import (
-	"errors"
-	log_v1 "github.com/martin-lenweiter/proglog/api/v1"
+	api "github.com/martin-lenweiter/proglog/api/v1"
 	"io"
 	"os"
 	"path"
@@ -86,7 +85,7 @@ func (l *Log) newSegment(off uint64) error {
 	return nil
 }
 
-func (l *Log) Append(record *log_v1.Record) (uint64, error) {
+func (l *Log) Append(record *api.Record) (uint64, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -100,26 +99,20 @@ func (l *Log) Append(record *log_v1.Record) (uint64, error) {
 	return off, err
 }
 
-func (l *Log) Read(off uint64) (*log_v1.Record, error) {
+func (l *Log) Read(off uint64) (*api.Record, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-
-	// find correct segment, if not return error
-	seg, err := l.findSegment(off)
-
-	if err != nil {
-		return nil, err
-	}
-	return seg.Read(off)
-}
-
-func (l *Log) findSegment(off uint64) (*segment, error) {
-	for n := len(l.segments) - 1; n >= 0; n-- {
-		if l.segments[n].baseOffset <= off {
-			return l.segments[n], nil
+	var s *segment
+	for _, segment := range l.segments {
+		if segment.baseOffset <= off && off < segment.nextOffset {
+			s = segment
+			break
 		}
 	}
-	return nil, errors.New("segment not found")
+	if s == nil || s.nextOffset <= off {
+		return nil, api.ErrOffsetOutOfRange{Offset: off}
+	}
+	return s.Read(off)
 }
 
 func (l *Log) Close() error {
